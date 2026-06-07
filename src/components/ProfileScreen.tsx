@@ -38,7 +38,7 @@ const TRANSLATIONS = {
     // 5. Impressum & Datenschutz
     legalTitle: "Datenschutz & Impressum",
     impressumOperator: "Verantwortlicher Betreiber für QED:",
-    impressumBody: "Jonas\nStuttgart, Deutschland\nE-mail: jonas@qed-app.de\nSupport: support@qed-app.de",
+    impressumBody: "Jonas\nStuttgart, Deutschland",
     privacyBtn: "Link zur Datenschutzerklärung (privacy.tsx)",
     
     // 6. Zweisprachigkeit
@@ -127,7 +127,7 @@ const TRANSLATIONS = {
     // 5. Impressum & Datenschutz
     legalTitle: "Privacy & Legal Notice",
     impressumOperator: "Responsible operator for QED:",
-    impressumBody: "Jonas\nStuttgart, Germany\nEmail: jonas@qed-app.de\nSupport: support@qed-app.de",
+    impressumBody: "Jonas\nStuttgart, Germany",
     privacyBtn: "Link to Privacy Policy (privacy.tsx)",
     
     // 6. Zweisprachigkeit

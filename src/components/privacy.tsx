@@ -33,9 +33,7 @@ export default function PrivacyView({ onBack, language }: PrivacyViewProps) {
             <p>Verantwortlich für die Datenerfassung und Datenverarbeitung in dieser Anwendung ist:</p>
             <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-slate-800 text-[11px] font-mono whitespace-pre-wrap">
 {`Betreiber: Jonas
-Ort: Stuttgart, Deutschland
-E-Mail: jonas@qed-app.de
-Webseite: https://ais-dev-hsblf7lhr2daxxz3zl6vm3-403146470255.europe-west3.run.app`}
+Ort: Stuttgart, Deutschland`}
             </div>
           </section>
 
@@ -75,8 +73,7 @@ Webseite: https://ais-dev-hsblf7lhr2daxxz3zl6vm3-403146470255.europe-west3.run.a
             <p>The responsible operator and data controller for this application is:</p>
             <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-slate-100 dark:border-slate-800 text-[11px] font-mono whitespace-pre-wrap">
 {`Controller: Jonas
-Location: Stuttgart, Germany
-Email: jonas@qed-app.de`}
+Location: Stuttgart, Germany`}
             </div>
           </section>
 

@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Sparkles, Camera, MessageSquare, Send, Check, X, AlertCircle, ChevronRight, HelpCircle, RefreshCw } from 'lucide-react';
+import { collection, doc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import { StudySheet, UserProfile } from '../types';
 
 interface AiCoachScreenProps {
@@ -28,6 +30,41 @@ export default function AiCoachScreen({ selectedSheet, triggerToast, checkAndInc
   const [loading, setLoading] = useState(false);
   const [responseHtml, setResponseHtml] = useState<string>('');
   const [chatSessionActive, setChatSessionActive] = useState(false);
+
+  // Support request when API limit is reached
+  const [supportMessage, setSupportMessage] = useState('');
+  const [supportSubmitting, setSupportSubmitting] = useState(false);
+  const [supportSentSuccess, setSupportSentSuccess] = useState(false);
+
+  const handleSendSupportRequest = async () => {
+    if (!supportMessage.trim()) {
+      triggerToast("Bitte gib eine kurze Nachricht ein.", "error");
+      return;
+    }
+    setSupportSubmitting(true);
+    try {
+      const reqId = doc(collection(db, 'supportRequests')).id;
+      await setDoc(doc(db, 'supportRequests', reqId), {
+        id: reqId,
+        userId: userProfile?.userId || 'unknown',
+        userName: userProfile?.name || 'Mitschüler',
+        userEmail: userProfile?.email || 'unbekannt',
+        message: supportMessage.trim(),
+        timestamp: Math.floor(Date.now() / 1000),
+        status: 'open',
+        requestedLimitIncrease: true
+      });
+
+      setSupportSentSuccess(true);
+      setSupportMessage('');
+      triggerToast("Support-Anfrage übermittelt! Jonas wird dein API-Budget prüfen.", "success");
+    } catch (err) {
+      console.error("Support submission error:", err);
+      triggerToast("Senden fehlgeschlagen. Bitte versuche es später noch einmal.", "error");
+    } finally {
+      setSupportSubmitting(false);
+    }
+  };
   
   // Quiz Interactive state
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
@@ -412,7 +449,49 @@ export default function AiCoachScreen({ selectedSheet, triggerToast, checkAndInc
 
       <div className="flex-1 overflow-y-auto p-6 space-y-5 no-scrollbar z-10">
         
-        {chatSessionActive ? (
+        {remainingUploads === 0 ? (
+          <div className="bg-white/95 dark:bg-slate-950/95 border border-amber-200/60 dark:border-amber-900/40 rounded-2xl p-6 shadow-elegant space-y-4 animate-scaleUp">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-950/50 border border-amber-100 dark:border-amber-900/30 flex items-center justify-center text-amber-500 shrink-0">
+                <AlertCircle size={20} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white font-sans">API-Tagesbudget aufgebraucht</h3>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Du hast deine 2 täglichen KI-Coins aufgebraucht.</p>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed font-sans space-y-2">
+              <p>Um Missbrauch vorzubeugen und Serverressourcen zu sparen, sind die Scan-Analysen auf 2 Dokumente pro Tag limitiert.</p>
+              <p>Möchtest du dein Budget <strong>vollkommen kostenlos</strong> anheben lassen? Sende hier eine kurze Nachricht an unseren Support, um dein tägliches Limit freischalten zu lassen!</p>
+            </div>
+
+            {supportSentSuccess ? (
+              <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/30 rounded-xl flex items-center gap-2.5 animate-fadeIn">
+                <Check size={14} className="text-emerald-500 shrink-0" />
+                <span className="text-[10px] text-emerald-800 dark:text-emerald-300 font-bold">Support-Anfrage übermittelt! Jonas schaltet dich schnellstmöglich frei.</span>
+              </div>
+            ) : (
+              <div className="space-y-3 pt-1">
+                <textarea
+                  value={supportMessage}
+                  onChange={(e) => setSupportMessage(e.target.value)}
+                  placeholder="Z.B.: Hi Jonas, ich nutze QED super gerne für Physik und würde heute noch gerne mehr Lernzettel scannen! Schalte mich bitte frei. Danke!"
+                  className="w-full h-24 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-[11px] text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-blue-500 font-sans resize-none"
+                />
+                
+                <button
+                  type="button"
+                  onClick={handleSendSupportRequest}
+                  disabled={supportSubmitting}
+                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-[11px] rounded-xl cursor-pointer shadow-md transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                >
+                  {supportSubmitting ? "Wird gesendet..." : "API-Budget anfordern (Support-Anfrage)"}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : chatSessionActive ? (
           /* Direct interactive Chat UI */
           <div className="bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border border-blue-100 dark:border-blue-900/40 rounded-2xl p-5 min-h-[220px] flex flex-col justify-between shadow-elegant">
             <h4 className="font-bold text-slate-800 dark:text-slate-200 text-xs border-b border-blue-50 dark:border-blue-900/20 pb-2 flex justify-between items-center mb-3">

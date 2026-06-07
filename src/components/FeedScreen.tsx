@@ -163,7 +163,7 @@ export default function FeedScreen({ sheets, currentUserId, onLike, avatarBase64
       </div>
 
       {/* Feed Cards List */}
-      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6 scroll-smooth">
+      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6 scroll-smooth [-webkit-overflow-scrolling:touch] overscroll-y-contain">
         {sortedSheets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-16 h-16 bg-slate-100 dark:bg-slate-900 rounded-full flex items-center justify-center text-slate-400 mb-4 border border-slate-200/50 dark:border-slate-800">

@@ -40,9 +40,29 @@ import ProfileScreen from './components/ProfileScreen';
 const SEED_DATA: Omit<StudySheet, 'id' | 'createdAt'>[] = [];
 
 export default function App() {
-  const [user, setUser] = useState<any>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [authChecking, setAuthChecking] = useState(true);
+  const [user, setUser] = useState<any>(() => {
+    try {
+      const saved = localStorage.getItem('qed_cached_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
+    try {
+      const saved = localStorage.getItem('qed_cached_profile');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [authChecking, setAuthChecking] = useState(() => {
+    try {
+      return !localStorage.getItem('qed_cached_user');
+    } catch {
+      return true;
+    }
+  });
   const [sheets, setSheets] = useState<StudySheet[]>([]);
   const [activeTab, setActiveTab] = useState<'feed' | 'search' | 'upload' | 'ai' | 'profile'>('feed');
   const [aiSelectedSheet, setAiSelectedSheet] = useState<StudySheet | null>(null);
@@ -63,10 +83,26 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
+        try {
+          localStorage.setItem('qed_cached_user', JSON.stringify({
+            uid: currentUser.uid,
+            displayName: currentUser.displayName,
+            email: currentUser.email,
+            isAnonymous: currentUser.isAnonymous
+          }));
+        } catch (e) {
+          console.error("Cache user failed:", e);
+        }
         await ensureUserProfileDoc(currentUser);
       } else {
         setUser(null);
         setUserProfile(null);
+        try {
+          localStorage.removeItem('qed_cached_user');
+          localStorage.removeItem('qed_cached_profile');
+        } catch (e) {
+          console.error("Remove cache user failed:", e);
+        }
       }
       setAuthChecking(false);
     });
@@ -97,8 +133,19 @@ export default function App() {
         };
         await setDoc(userRef, initialProfile);
         setUserProfile(initialProfile);
+        try {
+          localStorage.setItem('qed_cached_profile', JSON.stringify(initialProfile));
+        } catch (e) {
+          console.error("Cache initial profile failed:", e);
+        }
       } else {
-        setUserProfile(snap.data() as UserProfile);
+        const profile = snap.data() as UserProfile;
+        setUserProfile(profile);
+        try {
+          localStorage.setItem('qed_cached_profile', JSON.stringify(profile));
+        } catch (e) {
+          console.error("Cache profile load failed:", e);
+        }
       }
     } catch (err) {
       console.warn("Firestore not connected, loading local profile cached locally:", err);
@@ -148,19 +195,31 @@ export default function App() {
     const q = query(collection(db, 'studySheets'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, async (snap) => {
       const sheetsList: StudySheet[] = [];
+      const seededPostsToClean: StudySheet[] = [];
+
       snap.forEach(docSnap => {
-        sheetsList.push(docSnap.data() as StudySheet);
+        const data = docSnap.data() as StudySheet;
+        // Exclude any seed users, bots, or pre-entered mock posts from display completely
+        if (
+          data.autorId === 'seed-user-1' || 
+          data.autorId === 'seed-user-2' || 
+          data.autor === '@maximilian' || 
+          data.autor === '@sophie_salem'
+        ) {
+          seededPostsToClean.push(data);
+        } else {
+          sheetsList.push(data);
+        }
       });
       setSheets(sheetsList);
 
-      // Auto-cleanup any old seeded preset posts from Firestore if found
-      const seededPosts = sheetsList.filter(s => s.autorId === 'seed-user-1' || s.autorId === 'seed-user-2');
-      if (seededPosts.length > 0) {
-        for (const post of seededPosts) {
+      // Attempt background auto-cleanup of seed/preset posts if user is authenticated
+      if (seededPostsToClean.length > 0) {
+        for (const post of seededPostsToClean) {
           try {
             await deleteDoc(doc(db, 'studySheets', post.id));
           } catch (err) {
-            console.error("Failed to auto-clean seed post:", err);
+            // Silently ignore if unauthenticated or permissions are pending
           }
         }
       }
@@ -177,7 +236,17 @@ export default function App() {
     const userRef = doc(db, 'users', user.uid);
     try {
       await updateDoc(userRef, updates);
-      setUserProfile(prev => prev ? { ...prev, ...updates } : null);
+      setUserProfile(prev => {
+        const profile = prev ? { ...prev, ...updates } : null;
+        if (profile) {
+          try {
+            localStorage.setItem('qed_cached_profile', JSON.stringify(profile));
+          } catch (e) {
+            console.error("Cache update profile failed:", e);
+          }
+        }
+        return profile;
+      });
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}`);
     }

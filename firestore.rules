@@ -92,5 +92,11 @@ service cloud.firestore {
       );
       allow delete: if isSignedIn() && (isOwner(existing().autorId) || existing().autorId.matches('^seed-user-.*'));
     }
+
+    // Rules for /supportRequests/{requestId}
+    match /supportRequests/{requestId} {
+      allow create: if isSignedIn() && request.auth.uid == incoming().userId;
+      allow read, update, delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+    }
   }
 }
