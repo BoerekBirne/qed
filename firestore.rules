@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable global helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Helper to get incoming payload
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // Helper to get existing data
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation for User Entity
+    function isValidUser(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.email is string && data.email.size() <= 150 &&
+             (data.bio == null || (data.bio is string && data.bio.size() <= 500)) &&
+             (data.age == null || (data.age is int && data.age >= 0 && data.age <= 120)) &&
+             data.userLevel is int && data.userLevel >= 0 &&
+             data.totalLikes is int && data.totalLikes >= 0 &&
+             data.imageCount is int && data.imageCount >= 0 && data.imageCount <= 1500 &&
+             (data.followers == null || (data.followers is int && data.followers >= 0)) &&
+             (data.isPrivate == null || data.isPrivate is bool) &&
+             (data.themePreference == null || (data.themePreference is string && data.themePreference.size() <= 50)) &&
+             (data.languagePreference == null || (data.languagePreference is string && data.languagePreference.size() <= 50)) &&
+             (data.pushLikes == null || data.pushLikes is bool) &&
+             (data.pushComments == null || data.pushComments is bool) &&
+             (data.lastUploadDate == null || (data.lastUploadDate is string && data.lastUploadDate.size() <= 50)) &&
+             (data.dailyUploadCount == null || (data.dailyUploadCount is int && data.dailyUploadCount >= 0));
+    }
+
+    // Validation for StudySheet Entity
+    function isValidStudySheet(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.titel is string && data.titel.size() > 0 && data.titel.size() <= 200 &&
+             data.fach is string && data.fach.size() > 0 && data.fach.size() <= 100 &&
+             data.schule is string && data.schule.size() > 0 && data.schule.size() <= 150 &&
+             data.inhalt is string && data.inhalt.size() <= 20000 &&
+             data.autor is string && data.autor.size() <= 100 &&
+             data.autorId is string && data.autorId.size() <= 128 &&
+             data.likes is int && data.likes >= 0 &&
+             data.likedBy is list && data.likedBy.size() <= 10000 &&
+             data.createdAt is int &&
+             (data.image == null || (data.image is string && data.image.size() <= 800000));
+    }
+
+    // Rules for /users/{userId}
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming());
+      allow delete: if isOwner(userId);
+    }
+
+    // Rules for /studySheets/{sheetId}
+    match /studySheets/{sheetId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isOwner(incoming().autorId) && isValidStudySheet(incoming()) && incoming().likes == 0 && incoming().likedBy.size() == 0;
+      allow update: if isSignedIn() && (
+        // Action: Edit sheet
+        (isOwner(existing().autorId) && isOwner(incoming().autorId) && isValidStudySheet(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['titel', 'fach', 'schule', 'inhalt', 'image'])) ||
+        // Action: Like/Unlike (Allows signed-in user to like or unlike)
+        (isValidStudySheet(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'likedBy']) && (
+          // Addition
+          (incoming().likedBy.size() == existing().likedBy.size() + 1 && incoming().likes == existing().likes + 1 && incoming().likedBy.hasAll([request.auth.uid])) ||
+          // Removal
+          (incoming().likedBy.size() == existing().likedBy.size() - 1 && incoming().likes == existing().likes - 1 && !incoming().likedBy.hasAll([request.auth.uid]))
+        ))
+      );
+      allow delete: if isSignedIn() && (isOwner(existing().autorId) || existing().autorId.matches('^seed-user-.*'));
+    }
+  }
+}

@@ -1,0 +1,130 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Saves user profile levels and app configurations",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Authentication ID of the user"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the user"
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user"
+        },
+        "bio": {
+          "type": "string",
+          "description": "Brief autobiography or school detail"
+        },
+        "age": {
+          "type": "number",
+          "description": "Age of the user"
+        },
+        "userLevel": {
+          "type": "number",
+          "description": "Computed level of user based on Math.floor(totalLikes / 10)"
+        },
+        "totalLikes": {
+          "type": "number",
+          "description": "Total likes received on their study sheets"
+        },
+        "followers": {
+          "type": "number",
+          "description": "Number of simulated followers"
+        },
+        "imageCount": {
+          "type": "number",
+          "description": "Number of loaded profile pictures - limited to 1000"
+        },
+        "isPrivate": {
+          "type": "boolean",
+          "description": "Whether profile visibility is restricted"
+        },
+        "themePreference": {
+          "type": "string",
+          "description": "Preferred visual design theme"
+        },
+        "languagePreference": {
+          "type": "string",
+          "description": "Preferred interface language"
+        },
+        "pushLikes": {
+          "type": "boolean",
+          "description": "Receive push notifications for likes"
+        },
+        "pushComments": {
+          "type": "boolean",
+          "description": "Receive push notifications for comments"
+        }
+      },
+      "required": ["userId", "name", "email", "userLevel", "totalLikes", "imageCount"]
+    },
+    "StudySheet": {
+      "title": "StudySheet",
+      "description": "A study document containing OCR analysis data and image context",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Document unique identifier"
+        },
+        "titel": {
+          "type": "string",
+          "description": "Aussagekräftiger Titel des Zettels"
+        },
+        "fach": {
+          "type": "string",
+          "description": "Schulfach oder Thema"
+        },
+        "schule": {
+          "type": "string",
+          "description": "Bildungseinrichtung oder Schule"
+        },
+        "inhalt": {
+          "type": "string",
+          "description": "Indizierter Text der Mitschrift"
+        },
+        "autor": {
+          "type": "string",
+          "description": "Username of the author starting with @"
+        },
+        "autorId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the author"
+        },
+        "likes": {
+          "type": "number",
+          "description": "Total number of likes received"
+        },
+        "likedBy": {
+          "type": "array",
+          "description": "List of user UIDs who liked this study sheet"
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Seconds timestamp of upload"
+        },
+        "image": {
+          "type": "string",
+          "description": "Base64 string image representation or mockup SVG"
+        }
+      },
+      "required": ["id", "titel", "fach", "schule", "inhalt", "autor", "autorId", "likes", "likedBy", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection where user stats and applet configurations are updated"
+    },
+    "/studySheets/{sheetId}": {
+      "schema": "StudySheet",
+      "description": "Collection of all study sheets, limited to 3000 documents via cleanup logic"
+    }
+  }
+}
